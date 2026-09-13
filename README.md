@@ -1,5 +1,4 @@
-# From Conversation History to Task State: \\
-Diagnosing Specialized Small Language Model Agents under Incremental Observation
+# From Conversation History to Task State: Diagnosing Small Language Models under Incremental Observations
 
 Apurbo Banik Turjo
 
