@@ -146,7 +146,7 @@ will be tested more carefully in the final analysis.
 
 ### In progress
 
-- [ ] Finish the matched runs.
+- [x] Finish the matched runs.
 - [ ] Check runs and provenance.
 - [ ] Summarize the results.
 
