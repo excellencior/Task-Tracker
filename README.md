@@ -4,7 +4,7 @@ Apurbo Banik Turjo
 
 **Collaborators:** Sushmita Paul, Dr. Ch. Md. Rakin Haider
 
-Research summary updated October 2026. Paper in preparation.
+Research progress updated 15 October 2026. Paper in preparation.
 
 This repository presents the study's design and current results. The aggregate
 analysis is public here; raw trajectories, full prompts, and run manifests are
@@ -57,6 +57,64 @@ text is removed; previous observations and visible model replies remain.
 The current reminder is always present.
 
 ![Retaining and clearing earlier state reminders.](assets/history_policies.png)
+
+## Research progress
+
+This is a changing checklist. Completed items preserve what was tested at that
+stage; open items record the next analysis or experiment rather than presenting
+preliminary observations as final claims.
+
+- [x] ~~Run the original state-support study.~~ **25,600 trajectories** across
+  four models, BFS and DFS, two difficulties, RAW/PSR/SSR/VI, and two history
+  policies.
+- [x] ~~Audit the behavioral metrics and complete the primary LLM-judge pass.~~
+  The objective analysis covers all trajectories; the primary judge pass covers
+  2,560 paired trajectories.
+- [x] ~~Run a matched control-state follow-up.~~ The H100 follow-up reran all
+  **25,600 state-support trajectories** while supplying the BFS queue and
+  withholding the DFS stack. This removes the original queue/stack asymmetry
+  without changing the four models, selected graphs, or 200-problem cell size.
+- [x] ~~Pilot model-owned memory.~~ A further **6,400 trajectories** compare
+  model-written memory carried with full history against memory as the model's
+  only cross-turn state. The model could choose and replace any inner JSON
+  schema; only the outer action-and-memory response envelope was fixed.
+- [ ] Complete the matched comparison between the original and symmetric
+  state-support campaigns, including per-model and per-difficulty uncertainty.
+- [ ] Rerun the model-owned-memory pilot with schema-constrained outer JSON.
+  In the current autonomous-memory lane, 14,660 of 57,820 calls were rejected;
+  90.6% of those rejections began with non-JSON output, primarily Markdown
+  fences. The rerun should preserve unrestricted model-designed memory while
+  separating memory quality from response-envelope compliance.
+- [ ] Complete judge repeatability and independent human calibration.
+- [ ] Evaluate a time-aligned VI protocol and extend the study beyond graph
+  traversal.
+
+The latest H100 campaign contains **32,000 trajectories** in total. The
+following results are preliminary and use the current non-teacher-forced
+traversal scorer. Each state-support row pools 3,200 trajectories and reports
+completion, correct traversal prefix, and algorithm-correct completion.
+
+| Task | Condition | Graph completion | Correct traversal prefix | Algorithm-correct completion |
+| --- | --- | ---: | ---: | ---: |
+| BFS with queue | RAW | 10.00% | 12.08% | 0.28% |
+| BFS with queue | PSR | 82.09% | 47.15% | 33.19% |
+| BFS with queue | SSR | 87.75% | 57.21% | 45.91% |
+| BFS with queue | VI | 80.25% | 47.68% | 35.31% |
+| DFS without supplied stack | RAW | 25.41% | 51.40% | 16.38% |
+| DFS without supplied stack | PSR | 51.16% | 79.42% | 40.53% |
+| DFS without supplied stack | SSR | 46.88% | 80.32% | 38.38% |
+| DFS without supplied stack | VI | 41.75% | 74.22% | 32.72% |
+
+The memory pilot has 3,200 trajectories per design:
+
+| Memory design | Graph completion | Correct traversal prefix | Algorithm-correct completion |
+| --- | ---: | ---: | ---: |
+| Model-written memory with full history | 12.03% | 17.32% | 6.41% |
+| Model-written memory as the only cross-turn state | 2.97% | 11.70% | 0.59% |
+
+The autonomous-memory result currently measures both memory management and
+strict JSON-envelope compliance. It should therefore be treated as a diagnosed
+pilot outcome, not evidence that model-designed memory itself is ineffective.
 
 ## What the metrics mean
 
@@ -165,11 +223,9 @@ causal effect of verification alone.
 
 ![Recorded VI report outcomes and the share of trajectories with conflicting temporal values.](assets/result_vi_protocol.png)
 
-Next, we will validate judge repeatability and human agreement, evaluate a
-time-aligned VI protocol, isolate the effects of algorithm-specific control
-state, and test beyond these graphs and prompts. The paper will keep the
-behavioral outcomes primary and the judge analysis exploratory until those
-checks are complete.
+The live checklist above tracks the follow-up analyses and experiments. The
+paper will keep behavioral outcomes primary and judge analysis exploratory
+until the repeatability and human-calibration checks are complete.
 
 ---
 
