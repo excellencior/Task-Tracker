@@ -27,13 +27,25 @@ we hope to study.
 
 ## Experimental setup
 
-The completed inference campaign contains **25,600 trajectories**: four model
-checkpoints, two tasks, two difficulty levels, four state-support conditions,
-two history policies, and 200 matched graphs per exact cell. The models are
-Qwen3-1.7B, Qwen3.5-2B, Qwen3.5-4B, and Gemma-4-E4B-IT. Inference used one
-H100 NVL with a vLLM server, up to 16 concurrent episodes, greedy decoding
-(temperature 0), a 4,096-token output cap, a 2,048-token thinking budget,
-and a 32,768-token context limit.
+The completed behavioral evidence contains **57,600 trajectories** across two
+matched external-state campaigns and two model-managed-memory variants. Every
+campaign uses Qwen3-1.7B, Qwen3.5-2B, Qwen3.5-4B, and Gemma-4-E4B-IT; normal
+and hard BFS/DFS instances; 200 matched graphs per exact cell; greedy decoding;
+a 4,096-token output cap; a 2,048-token thinking budget; and a 32,768-token
+context limit.
+
+| Campaign | Trajectories | State or memory supplied | History regimes | Prompt / execution |
+| --- | ---: | --- | --- | --- |
+| Initial external state | 25,600 | BFS: node + visited, no queue. DFS: node + visited + stack. RAW, PSR, SSR, VI. | Retain / clear injection | `p1_concise_legacy`; H100 NVL; up to 16 parallel trajectories. |
+| Matched control-state follow-up | 25,600 | BFS: queue supplied. DFS: stack omitted. The same RAW, PSR, SSR, VI cells. | Retain / clear injection | Same task prompt, decoding, graphs, limits, and scorer; H100; 64 parallel trajectories. |
+| Model memory + history | 3,200 | Model-chosen free-schema JSON memory, capped at 1,024 tokens; no verified queue or stack. | Full conversation plus latest memory | `p1_model_memory_injection`; H100; 64 parallel trajectories. |
+| Model memory only | 3,200 | The same model-owned JSON store is the only cross-turn memory beyond current observation and feedback. | Earlier conversation omitted | `p1_model_memory_memory_only`; H100; 64 parallel trajectories. |
+
+The two external-state campaigns form the intended symmetric control-state
+comparison: together they cover BFS with and without its queue and DFS with
+and without its stack while holding the remaining cell parameters fixed. The
+model-managed variants ask whether the model can decide what to store and
+preserve it, so they remain separate from the external-state averages.
 
 ![Four state-support conditions: RAW, PSR, SSR, and VI.](assets/state_conditions.png)
 
@@ -44,17 +56,11 @@ and a 32,768-token context limit.
 | **SSR: Structured State Reminder** | The same task-specific facts in a tagged state block. |
 | **VI: Verifiable Injection** | SSR plus a required state report, checked against the environment, with feedback after a missing, malformed, or incorrect report. |
 
-Both PSR and SSR supply the current node and visited set. In the completed
-campaign, DFS also receives its root-to-current stack, while BFS does not
-receive an ordered queue. This matters when interpreting differences between
-the tasks.
-
 ![VI checks the model's state report and sends a correction on the next turn when needed.](assets/vi_state_matching.png)
 
-We also vary what remains in the conversation. Under **retain**, earlier
-injected reminders remain. Under **clear injection**, only the older reminder
-text is removed; previous observations and visible model replies remain.
-The current reminder is always present.
+Under **retain**, earlier injected reminders remain. Under **clear injection**,
+only the older reminder text is removed; previous observations and visible
+model replies remain. The current reminder is always present.
 
 ![Retaining and clearing earlier state reminders.](assets/history_policies.png)
 
@@ -123,37 +129,68 @@ traversal order.
 
 ## Behavioral results
 
-Every task-condition row below pools 3,200 trajectories across models,
+The first table preserves the parameters of the **initial externally supplied
+state campaign**. Each row pools 3,200 trajectories across models,
 difficulties, and history policies.
 
-| Task | Condition | Graph completion | AQA algorithm-correct completion |
-| --- | --- | ---: | ---: |
-| BFS | RAW | 10.94% | 0.44% |
-| BFS | PSR | 24.50% | 1.63% |
-| BFS | SSR | 24.53% | 2.56% |
-| BFS | VI | 16.41% | 3.03% |
-| DFS | RAW | 22.69% | 14.88% |
-| DFS | PSR | 72.84% | 58.13% |
-| DFS | SSR | 79.19% | 70.00% |
-| DFS | VI | 74.59% | 62.81% |
+| Task | Control state | Condition | Graph completion | AQA algorithm-correct completion |
+| --- | --- | --- | ---: | ---: |
+| BFS | Queue not supplied | RAW | 10.94% | 0.44% |
+| BFS | Queue not supplied | PSR | 24.50% | 1.63% |
+| BFS | Queue not supplied | SSR | 24.53% | 2.56% |
+| BFS | Queue not supplied | VI | 16.41% | 3.03% |
+| DFS | Stack supplied | RAW | 22.69% | 14.88% |
+| DFS | Stack supplied | PSR | 72.84% | 58.13% |
+| DFS | Stack supplied | SSR | 79.19% | 70.00% |
+| DFS | Stack supplied | VI | 74.59% | 62.81% |
 
 ![Graph completion, recorded FIFO success, and replayed AQA success by task and condition.](assets/result_task_performance.png)
 
-State support improves completion in both tasks, but much more in DFS.
-Relative to RAW, SSR raises completion by **13.59 percentage points in BFS**
-and **56.50 points in DFS**. BFS illustrates why completion and algorithm
-adherence must be reported separately: under SSR, 24.53% visit every node,
-but only 2.56% finish with an uninterrupted AQA-correct prefix.
+The matched follow-up preserves its complementary parameters. Each row again
+contains 3,200 trajectories and pools the same models, difficulties, and two
+history policies. Strict success means completion with a perfect recorded
+traversal prefix.
 
-The format contrast is also task-dependent. SSR minus PSR completion is
-**+0.03 points in BFS** and **+6.34 points in DFS**; the corresponding AQA
-success differences are **+0.94** and **+11.88 points**. These are matched
-within-task comparisons, not evidence that structure has one uniform effect.
+| Task | Control state | Condition | Graph completion | Strict success |
+| --- | --- | --- | ---: | ---: |
+| BFS | Queue supplied | RAW | 10.00% | 0.28% |
+| BFS | Queue supplied | PSR | 82.09% | 33.19% |
+| BFS | Queue supplied | SSR | 87.75% | 45.91% |
+| BFS | Queue supplied | VI | 80.25% | 35.31% |
+| DFS | Stack omitted | RAW | 25.41% | 16.38% |
+| DFS | Stack omitted | PSR | 51.16% | 40.53% |
+| DFS | Stack omitted | SSR | 46.88% | 38.38% |
+| DFS | Stack omitted | VI | 41.75% | 32.72% |
 
-Keeping older reminders raises completion by **15.97 points for PSR** and
-**19.03 points for SSR** relative to clearing them. RAW has no reminder to
-retain; its 0.88-point difference is a repeated-control comparison. The
-contrasts are descriptive for these models, graphs, prompts, and run limits.
+Supplying the missing BFS queue sharply raises externally assisted BFS
+performance, while removing the DFS stack reduces the corresponding DFS
+performance. RAW changes little. Together, the campaigns show that the
+original task gap partly reflected which control state the system supplied;
+they do not imply that BFS and DFS are intrinsically identical tasks.
+
+The final 6,400 trajectories let the model choose its own memory contents.
+Each row pools 1,600 trajectories across four models and two difficulties.
+The JSON contract means these runs jointly test memory design, retention,
+action choice, and format compliance.
+
+| Task | Model-managed variant | Graph completion | Strict success |
+| --- | --- | ---: | ---: |
+| BFS | Memory injected alongside full history | 1.38% | 0.12% |
+| BFS | Memory as the only cross-turn store | 3.25% | 0.19% |
+| DFS | Memory injected alongside full history | 22.69% | 12.69% |
+| DFS | Memory as the only cross-turn store | 2.69% | 1.00% |
+
+The memory-only DFS drop shows that permission to create a store does not
+guarantee preservation of sufficient task state when dialogue history is
+removed. BFS remains weak in both model-managed regimes. These are distinct
+variants, not replacements for RAW/PSR/SSR/VI or an isolated causal comparison
+with externally verified state.
+
+Within the initial campaign, SSR minus PSR completion is **+0.03 points in BFS
+without a queue** and **+6.34 points in DFS with a stack**. Retaining older
+reminders raises completion by **15.97 points for PSR** and **19.03 points for
+SSR**. The new judge campaign will apply the same blinded rubric to 3,200
+sampled follow-up trajectories before process-level conclusions are added.
 
 ## LLM judge and reasoning traces
 
@@ -188,10 +225,11 @@ is not complete.
 
 ## Limits and next steps
 
-The study uses four checkpoints, one prompt family, selected trees, finite
-token limits, and one execution per cell. DFS received a stack while BFS did
-not receive its queue, so their different gains do not isolate task difficulty
-or an equal amount of algorithmic support.
+The study uses four checkpoints, selected trees, finite token limits, and one
+execution per exact cell. The initial external-state campaign was asymmetric;
+the matched follow-up covers the complementary queue/stack settings. The
+model-managed variants use a different prompt and JSON response contract, so
+their absolute results do not isolate memory ownership alone.
 
 VI combines a state report, delayed feedback, and a prompt-format tension.
 In **4,625 of 6,400 VI trajectories**, at least one correction about a
